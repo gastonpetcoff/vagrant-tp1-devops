@@ -48,8 +48,9 @@ fi
 if [ ! -d "$APP_PATH" ]; then
 	echo "clono el repositorio"
 	cd $APACHE_ROOT
-	sudo git clone https://github.com/Fichen/utn-devops-app.git
+	#sudo git clone https://github.com/Fichen/utn-devops-app.git
+	sudo git clone https://github.com/gastonpetcoff/app-tp1-devops.git
 	cd $APP_PATH
-	sudo git checkout unidad-1
+	sudo git checkout main
 fi
 
