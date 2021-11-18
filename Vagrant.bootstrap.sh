@@ -51,6 +51,6 @@ if [ ! -d "$APP_PATH" ]; then
 	#sudo git clone https://github.com/Fichen/utn-devops-app.git
 	sudo git clone https://github.com/gastonpetcoff/app-tp1-devops.git
 	cd $APP_PATH
-	sudo git checkout main
+	sudo git checkout entrega-tp1
 fi
 
