@@ -1,2 +1,2 @@
-# vagrant-tp1-devops
-Practica 1 curso devops UTN - vagrant
+# tp2-docker
+TP2 UTN instalacion docker
