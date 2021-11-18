@@ -50,9 +50,9 @@ if [ ! -d  $APACHE_ROOT ]; then
 	sudo mkdir $APACHE_ROOT
 fi
 cd $APACHE_ROOT
-sudo git clone https://github.com/Fichen/utn-devops-app.git
+sudo git clone https://github.com/gastonpetcoff/app-tp1-devops
 cd $APP_PATH
-sudo git checkout unidad-2
+sudo git checkout unidad-2-app
 
 ######## Instalacion de DOCKER ########
 #
