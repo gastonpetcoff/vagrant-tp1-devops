@@ -1,31 +1,28 @@
 #!/bin/bash
 
-#Actualizo los paquetes de la maquina virtual
-sudo apt-get update -y
-
-#Aprovisionamiento de software
-sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common linux-image-extra-virtual-hwe-$(lsb_release -r |awk  '{ print $2 }') linux-image-extra-virtual
-
-# Muevo el archivo de configuración de firewall al lugar correspondiente
-if [ -f "/tmp/ufw" ]; then
-	sudo mv -f /tmp/ufw /etc/default/ufw
+##Genero una partición swap. Previene errores de falta de memoria
+if [ ! -f "/swapdir/swapfile" ]; then
+	sudo mkdir /swapdir
+	cd /swapdir
+	sudo dd if=/dev/zero of=/swapdir/swapfile bs=1024 count=2000000
+  sudo chmod 600 /swapdir/swapfile
+	sudo mkswap -f  /swapdir/swapfile
+	sudo swapon swapfile
+	echo "/swapdir/swapfile       none    swap    sw      0       0" | sudo tee -a /etc/fstab /etc/fstab
+	sudo sysctl vm.swappiness=10
+	echo vm.swappiness = 10 | sudo tee -a /etc/sysctl.conf
 fi
 
-# Muevo el archivo hosts. En este archivo esta asociado el nombre de dominio con una dirección
-# ip para que funcione las configuraciones de Puppet
-if [ -f "/tmp/etc_hosts.txt" ]; then
-	sudo mv -f /tmp/etc_hosts.txt /etc/hosts
-fi
+###### Puppet ######
+#Directorios
+PUPPET_DIR="/etc/puppet"
+ENVIRONMENT_DIR="${PUPPET_DIR}/code/environments/production"
+PUPPET_MODULES="${ENVIRONMENT_DIR}/modules"
 
-###### Instalación de Puppet ######
-#configuración de repositorio
 if [ ! -x "$(command -v puppet)" ]; then
 
 	#### Instalacion puppet master
   #Directorios
-  PUPPET_DIR="/etc/puppet"
-  ENVIRONMENT_DIR="${PUPPET_DIR}/code/environments/production"
-  PUPPET_MODULES="${ENVIRONMENT_DIR}/modules"
 
 	sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) universe"
  	sudo apt-get update
@@ -58,18 +55,21 @@ if [ ! -x "$(command -v puppet)" ]; then
   # Estructura de directorios para crear el modulo de Jenkins
   sudo mkdir -p $PUPPET_MODULES/jenkins/{manifests,files}
 
-  # muevo los archivos que utiliza Puppet
-  sudo mv -f /tmp/site.pp $ENVIRONMENT_DIR/manifests #/etc/puppet/manifests/
-  sudo mv -f /tmp/init.pp $PUPPET_MODULES/docker_install/manifests/init.pp
-  sudo mv -f /tmp/env $PUPPET_MODULES/docker_install/files
-  sudo mv -f /tmp/init_jenkins.pp $PUPPET_MODULES/jenkins/manifests/init.pp
-  sudo mv -f /tmp/jenkins_default $PUPPET_MODULES/jenkins/files/jenkins_default
-  sudo mv -f /tmp/jenkins_init_d $PUPPET_MODULES/jenkins/files/jenkins_init_d
-
   sudo cp /usr/share/doc/puppet/examples/etckeeper-integration/*commit* $PUPPET_DIR
   sudo chmod 755 $PUPPET_DIR/etckeeper-commit-p*
+
 fi
 
+# muevo los archivos que utiliza Puppet
+sudo cp -f /tmp/site.pp $ENVIRONMENT_DIR/manifests
+sudo cp -f /tmp/init.pp $PUPPET_MODULES/docker_install/manifests/init.pp
+sudo cp -f /tmp/env $PUPPET_MODULES/docker_install/files
+sudo cp -f /tmp/init_jenkins.pp $PUPPET_MODULES/jenkins/manifests/init.pp
+sudo cp -f /tmp/jenkins_dependencies.pp $PUPPET_MODULES/jenkins/manifests/dependencies.pp
+sudo cp -f /tmp/jenkins_default $PUPPET_MODULES/jenkins/files/jenkins_default
+sudo cp -f /tmp/jenkins_init_d $PUPPET_MODULES/jenkins/files/jenkins_init_d
+
+#Habilito el puerto en el firewall
 sudo ufw allow 8140/tcp
 
 # al detener e iniciar el servicio se regeneran los certificados
@@ -77,6 +77,8 @@ echo "Reiniciando servicios puppetmaster y puppet agent"
 sudo systemctl stop puppetmaster && sudo systemctl start puppetmaster
 sudo systemctl stop puppet && sudo systemctl start puppet
 
+echo "Instalacion modulo sudo"
+sudo puppet module install saz-sudo
 
 # limpieza de configuración del dominio utn-devops.localhost es nuestro nodo agente.
 # en nuestro caso es la misma máquina
@@ -84,4 +86,3 @@ sudo puppet node clean utn-devops.localhost
 
 # Habilito el agente
 sudo puppet agent --certname utn-devops.localhost --enable
-
